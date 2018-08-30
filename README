@@ -1,0 +1,12 @@
+# Twitter Downloader
+
+Support jpeg and video download in Twitter
+
+
+* Image - Get the URL and save it to disk is fine.
+
+* Video - Get the Video Clip in Twitter website
+
+### How we know where is the Video ?
+
+ts/m3u8 -> config.json
