@@ -44,6 +44,8 @@ func main() {
 	// twitter.Getm3u8List(client)
 	//Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/pl/540x960/Vyiq7upZ9HjHDruX.m3u8")
 	Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/0/3000/540x960/DJ0xXa4TpDDejYlV.ts")
+	Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/3000/6000/540x960/Ij-0cqTubNDJbd1E.ts")
+	Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/6000/10043/540x960/kljEHBu_sl5nP90X.ts")
 }
 
 func Request(url string) {
