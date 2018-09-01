@@ -17,6 +17,10 @@ type Client struct {
 	socks5IpPort string
 }
 
+func (c *Client) Init() {
+	c.client = &http.Client{}
+}
+
 func (c Client) Get(url string) error {
 	if c.client == nil {
 		c.client = &http.Client{}

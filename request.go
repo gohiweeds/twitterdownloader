@@ -7,30 +7,63 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
-
-	"github.com/osrtss/rtss/m3u8"
+	"os"
+	"strings"
 )
 
 type Twitter struct {
 	guest_token string
 	playbackUrl string
+	c           *Client
 }
 
-// t = `
-// OPTIONS https://api.twitter.com/1.1/guest/activate.json
-// Accept:*/*
-// Accept-Encoding:gzip,deflate,br
-// Access-Control-Request-Headers:authorization,x-csrf-token
-// Access-Control-Request-Method:POST
-// Origin: https://twitter.com
-// User-Agent:Mozilla/5.0 (X11; Linux x86_64)
-// `
+// Download Video from Twitter by Guest
+func (t *Twitter) DownloadVideo(url string) error {
+	//Parse url to get tweet Id
+	//https: //twitter.com/i/status/1035056498307522560
+	uris := strings.Split(url, "/")
+	var configJson string
+	if len(uris) >= 5 {
+		configJson = "https://api.twitter.com/1.1/videos/tweet/config/" + uris[5] + ".json"
+	} else {
+		return errors.New("URL provided shoud have form like (https: //twitter.com/i/status/1035056498307522560)")
+	}
+	fmt.Println("configUrl:", configJson)
 
-func (t *Twitter) Activate(c *Client) error {
+	err := t.activate(t.c)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	err = t.activate2(t.c)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	err = t.getVideoJson(t.c, configJson)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	//jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
+	err = t.getVideoJson2(t.c, configJson)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	//jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
+	err = t.getm3u8List(t.c)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return err
+}
+
+func (t *Twitter) SetupClient(c *Client) {
+	t.c = c
+}
+
+func (t *Twitter) activate(c *Client) error {
 	if c.client == nil {
-		return errors.New("Client is nil, should init with proxy")
+		// return errors.New("Client is nil, should init with proxy")
+		c.client = &http.Client{}
 	}
 
 	activateUrl := "https://api.twitter.com/1.1/guest/activate.json"
@@ -48,36 +81,22 @@ func (t *Twitter) Activate(c *Client) error {
 	}
 
 	resp, err := c.client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	defer resp.Body.Close()
 
 	//fmt.Println("Activate Response: ", resp)
 	return nil
 }
 
-// tt = `
-// :authority: api.twitter.com
-// :method: POST
-// :path: /1.1/guest/activate.json
-// :scheme: https
-// accept: */*
-// accept-encoding: gzip, deflate, br
-// accept-language: zh-CN,zh;q=0.9,ar;q=0.8
-// authorization: Bearer AAAAAAAAAAAAAAAAAAAAAIK1zgAAAAAA2tUWuhGZ2JceoId5GwYWU5GspY4%3DUq7gzFoCZs1QfwGoVdvSac3IniczZEYXIcDyumCauIXpcAPorE
-// content-length: 0
-// cookie: personalization_id="v1_pid1UUVchOmH31FJFT2ZLA=="; guest_id=v1%3A153569557385510737
-// origin: https://twitter.com
-// referer: https://twitter.com/i/videos/tweet/1035056498307522560
-// user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/65.0.3325.181 Chrome/65.0.3325.181 Safari/537.36
-// x-csrf-token: undefined
-// `
-
 type GuestToken struct {
 	GuestToken string `json:"guest_token"`
 }
 
-func (t *Twitter) Activate2(c *Client) error {
+func (t *Twitter) activate2(c *Client) error {
 	if c.client == nil {
-		return errors.New("Client is nil, should init with proxy")
+		c.client = &http.Client{}
 	}
 	activateUrl := "https://api.twitter.com/1.1/guest/activate.json"
 	req, err := http.NewRequest("POST", activateUrl, nil)
@@ -115,25 +134,12 @@ func (t *Twitter) Activate2(c *Client) error {
 	return nil
 }
 
-// tt=`
-// :authority: api.twitter.com
-// :method: OPTIONS
-// :path: /1.1/videos/tweet/config/1035056498307522560.json
-// :scheme: https
-// accept: */*
-// accept-encoding: gzip, deflate, br
-// accept-language: zh-CN,zh;q=0.9,ar;q=0.8
-// access-control-request-headers: authorization,x-csrf-token,x-guest-token
-// access-control-request-method: GET
-// origin: https://twitter.com
-// user-agent: Mozilla/5.0 (X11; Linux x86_64)
-// `
-func (t *Twitter) GetVideoJson(c *Client) error {
+func (t *Twitter) getVideoJson(c *Client, jsonUrl string) error {
 	if c.client == nil {
-		return errors.New("Client is nil, should init with proxy")
+		c.client = &http.Client{}
 	}
 
-	jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
+	//jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
 	req, err := http.NewRequest("OPTIONS", jsonUrl, nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
@@ -154,23 +160,6 @@ func (t *Twitter) GetVideoJson(c *Client) error {
 	return nil
 }
 
-// tt=`
-// :authority: api.twitter.com
-// :method: GET
-// :path: /1.1/videos/tweet/config/1035056498307522560.json
-// :scheme: https
-// accept: */*
-// accept-encoding: gzip, deflate, br
-// accept-language: zh-CN,zh;q=0.9,ar;q=0.8
-// authorization: Bearer AAAAAAAAAAAAAAAAAAAAAIK1zgAAAAAA2tUWuhGZ2JceoId5GwYWU5GspY4%3DUq7gzFoCZs1QfwGoVdvSac3IniczZEYXIcDyumCauIXpcAPorE
-// cookie: personalization_id="v1_pid1UUVchOmH31FJFT2ZLA=="; guest_id=v1%3A153569557385510737; gt=1035408416074657792
-// origin: https://twitter.com
-// referer: https://twitter.com/i/videos/tweet/1035056498307522560
-// user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/65.0.3325.181 Chrome/65.0.3325.181 Safari/537.36
-// x-csrf-token: undefined
-// x-guest-token: 1035408416074657792
-// `
-
 type VideoConfig struct {
 	Track Track `json:"track"`
 }
@@ -183,11 +172,11 @@ type Track struct {
 	PlaybackUrl  string `json:"playbackUrl"`
 }
 
-func (t *Twitter) GetVideoJson2(c *Client) error {
+func (t *Twitter) getVideoJson2(c *Client, jsonUrl string) error {
 	if c.client == nil {
-		return errors.New("Client is nil, should init with proxy")
+		c.client = &http.Client{}
 	}
-	jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
+	//jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
 	req, err := http.NewRequest("GET", jsonUrl, nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
@@ -224,9 +213,9 @@ func (t *Twitter) GetVideoJson2(c *Client) error {
 	return nil
 }
 
-func (t *Twitter) Getm3u8List(c *Client) error {
+func (t *Twitter) getm3u8List(c *Client) error {
 	if c.client == nil {
-		return errors.New("Client is nil, should init with proxy")
+		c.client = &http.Client{}
 	}
 
 	req, err := http.NewRequest("GET", t.playbackUrl, nil)
@@ -243,6 +232,9 @@ func (t *Twitter) Getm3u8List(c *Client) error {
 	}
 
 	resp, err := c.client.Do(req)
+	if err != nil {
+		fmt.Println("Getm3u8List:", err.Error())
+	}
 	defer resp.Body.Close()
 
 	var reader io.ReadCloser
@@ -254,21 +246,116 @@ func (t *Twitter) Getm3u8List(c *Client) error {
 	default:
 		reader = resp.Body
 	}
-	body, err := ioutil.ReadAll(reader)
 
-	// fileName := extractFilename(t.playbackUrl)
-	fmt.Println("m3u8 list:\n", string(body))
-	// if err = ioutil.WriteFile(fileName, body, os.ModePerm); err != nil {
-	// 	fmt.Println(err.Error())
-	// 	return err
-	// }
-
-	playlist, listType, err := m3u8.DecodeFrom(resp.Body, false)
+	uri, err := playList(reader)
 	if err != nil {
-		log.Fatalf("M3U8 decode failed, err: %v", err)
+		fmt.Println("err", err.Error())
+		return err
 	}
 
-	fmt.Println("palylist:", playlist)
-	fmt.Println("palyType:", listType)
+	fileName := extractFilename(t.playbackUrl)
+	fileName = strings.Split(fileName, ".")[0]
+	m3u8Url := "https://video.twimg.com" + uri
+	fmt.Println("m3u8Url:", m3u8Url)
+	videoList, err := getM3U8(m3u8Url, c)
+	if err != nil {
+		fmt.Println("err", err.Error())
+		return err
+	}
+	files := []string{}
+	for _, v := range videoList {
+		videoUrl := "https://video.twimg.com" + v
+		fmt.Println("videoUrl:", videoUrl)
+		//Get video clip save concat them into mp4 file
+		file, err := getVideoClip(videoUrl, c)
+		if err != nil {
+			return err
+		}
+		files = append(files, file)
+	}
+
+	//Combine all the videos into one mp4
+	combineVideoClip(fileName, files)
 	return nil
+}
+
+func getM3U8(url string, c *Client) ([]string, error) {
+	if c.client == nil {
+		c.client = &http.Client{}
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
+
+	if err != nil {
+		fmt.Println("GetWithProxy:", err.Error())
+		return nil, err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		fmt.Println("getM3U8:", err.Error())
+	}
+	defer resp.Body.Close()
+
+	var reader io.ReadCloser
+
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(resp.Body)
+		defer reader.Close()
+	default:
+		reader = resp.Body
+	}
+
+	return videoList(reader)
+}
+
+func getVideoClip(url string, c *Client) (string, error) {
+	if c.client == nil {
+		c.client = &http.Client{}
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
+
+	if err != nil {
+		fmt.Println("GetWithProxy:", err.Error())
+		return "", err
+	}
+
+	resp, err := c.client.Do(req)
+	defer resp.Body.Close()
+
+	fileName := extractFilename(url)
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err = ioutil.WriteFile(fileName, body, os.ModePerm); err != nil {
+		return "", err
+	}
+
+	return fileName, nil
+}
+
+func combineVideoClip(filename string, files []string) {
+	file, err := os.Create(filename + ".mp4")
+	if err != nil {
+		fmt.Println("Create mp4 failed", err.Error())
+		return
+	}
+	writeLen := 0
+	for _, v := range files {
+		data, err := ioutil.ReadFile(v)
+		if err != nil {
+			fmt.Println("read file failed", err.Error())
+			return
+		}
+		file.WriteAt(data, int64(writeLen))
+		writeLen += len(data)
+		os.Remove(v)
+	}
+	file.Close()
 }

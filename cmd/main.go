@@ -29,23 +29,28 @@ func main() {
 	//Need authenticate
 	//Request("https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json")
 
-	// client := &tw.Client{}
+	//client := &tw.Client{}
+	//client.Init()
 	// _, err := client.ClientWithSOCKS5("tcp", "127.0.0.1:1080")
+	// _, err := client.ClientWithSOCKS5("tcp", "127.0.0.1:1087")
 	// if err != nil {
 	// 	fmt.Println(err.Error())
 	// 	return
 	// }
-	//
-	// twitter := &tw.Twitter{}
-	// twitter.Activate(client)
-	// twitter.Activate2(client)
-	// twitter.GetVideoJson(client)
-	// twitter.GetVideoJson2(client)
-	// twitter.Getm3u8List(client)
+	client := &tw.Client{}
+
+	twitter := &tw.Twitter{}
+	twitter.SetupClient(client)
+	twitter.DownloadVideo("https: //twitter.com/i/status/1035056498307522560")
+
 	//Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/pl/540x960/Vyiq7upZ9HjHDruX.m3u8")
-	Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/0/3000/540x960/DJ0xXa4TpDDejYlV.ts")
-	Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/3000/6000/540x960/Ij-0cqTubNDJbd1E.ts")
-	Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/6000/10043/540x960/kljEHBu_sl5nP90X.ts")
+
+	// Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/0/3000/540x960/DJ0xXa4TpDDejYlV.ts")
+	// Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/3000/6000/540x960/Ij-0cqTubNDJbd1E.ts")
+	// Request("https://video.twimg.com/ext_tw_video/1035056301657583617/pu/vid/6000/10043/540x960/kljEHBu_sl5nP90X.ts")
+
+	// playList()
+	// videoplayList()
 }
 
 func Request(url string) {
