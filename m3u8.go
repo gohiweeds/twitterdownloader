@@ -4,15 +4,29 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 
 	"github.com/grafov/m3u8"
 )
 
+func saveFile(filename string, reader io.ReadCloser) error {
+	body, err := ioutil.ReadAll(reader)
+
+	if err = ioutil.WriteFile(filename, body, os.ModePerm); err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	return nil
+}
+
 func playList(reader io.ReadCloser) (string, error) {
+	// saveFile("playlist.m3u8", reader)
 	// f, err := os.Open("playlist.m3u8")
 	// if err != nil {
 	// 	panic(err)
 	// }
+
 	p, listType, err := m3u8.DecodeFrom(reader, true)
 	if err != nil {
 		panic(err)

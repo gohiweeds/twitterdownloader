@@ -18,6 +18,15 @@ type Twitter struct {
 	c           *Client
 }
 
+// Download jpeg from Twitter
+func (t *Twitter) DownloadJPG(url string) error {
+	if t.c.client == nil {
+		// return errors.New("Client is nil, should init with proxy")
+		t.c.client = &http.Client{}
+	}
+	return t.c.GetWithProxy(url)
+}
+
 // Download Video from Twitter by Guest
 func (t *Twitter) DownloadVideo(url string) error {
 	//Parse url to get tweet Id
@@ -90,10 +99,6 @@ func (t *Twitter) activate(c *Client) error {
 	return nil
 }
 
-type GuestToken struct {
-	GuestToken string `json:"guest_token"`
-}
-
 func (t *Twitter) activate2(c *Client) error {
 	if c.client == nil {
 		c.client = &http.Client{}
@@ -160,18 +165,6 @@ func (t *Twitter) getVideoJson(c *Client, jsonUrl string) error {
 	return nil
 }
 
-type VideoConfig struct {
-	Track Track `json:"track"`
-}
-type Track struct {
-	ContentId    string `json:"contentId"`
-	ContentType  string `json:"contentType"`
-	Duration     int    `json:"durationMs"`
-	ExpandedUrl  string `json:"expandedUrl"`
-	PlaybackType string `json:"playbackType"`
-	PlaybackUrl  string `json:"playbackUrl"`
-}
-
 func (t *Twitter) getVideoJson2(c *Client, jsonUrl string) error {
 	if c.client == nil {
 		c.client = &http.Client{}
@@ -218,6 +211,8 @@ func (t *Twitter) getm3u8List(c *Client) error {
 		c.client = &http.Client{}
 	}
 
+	fmt.Println("playbackUrl:", t.playbackUrl)
+
 	req, err := http.NewRequest("GET", t.playbackUrl, nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
@@ -247,6 +242,13 @@ func (t *Twitter) getm3u8List(c *Client) error {
 		reader = resp.Body
 	}
 
+	//Trim ?tag=5
+	videoUrl := strings.Split(t.playbackUrl, "?")[0]
+	if strings.HasSuffix(videoUrl, ".mp4") {
+		filename := extractFilename(videoUrl)
+		saveFile(filename, reader)
+		return nil
+	}
 	uri, err := playList(reader)
 	if err != nil {
 		fmt.Println("err", err.Error())

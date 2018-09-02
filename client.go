@@ -17,6 +17,7 @@ type Client struct {
 	socks5IpPort string
 }
 
+/// Init client structure
 func (c *Client) Init() {
 	c.client = &http.Client{}
 }
@@ -71,7 +72,7 @@ func (c *Client) GetWithProxy(url string) error {
 	// }
 
 	fileName := extractFilename(url)
-
+	fileName = strings.Split(fileName, ":")[0]
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err = ioutil.WriteFile(fileName, body, os.ModePerm); err != nil {

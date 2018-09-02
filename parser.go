@@ -14,7 +14,7 @@ const (
 )
 
 // Video URL: <meta  property="og:video:url" content="https://twitter.com/i/videos/1033716646911729665?embed_source=facebook">
-func (c *Client) ParseVideoUrl(reader io.ReadCloser) string {
+func (c *Client) parseVideoUrl(reader io.ReadCloser) string {
 	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
