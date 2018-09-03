@@ -9,9 +9,14 @@ Support jpeg and video download in Twitter
 
 # Usage
 
+  Download Project:
+  ```
+  go get github.com/gohiweeds/twitterdownloader
+  ```
   Install dependency:
   ```
   go get github.com/grafov/m3u8
+  go get github.com/Sirupsen/logrus
   ```
 
   Run Test command:
