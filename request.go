@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -19,7 +18,7 @@ type Twitter struct {
 }
 
 // Download jpeg from Twitter
-func (t *Twitter) DownloadJPG(url string) error {
+func (t *Twitter) DownloadJPG(url string) (string, error) {
 	if t.c.client == nil {
 		// return errors.New("Client is nil, should init with proxy")
 		t.c.client = &http.Client{}
@@ -28,7 +27,7 @@ func (t *Twitter) DownloadJPG(url string) error {
 }
 
 // Download Video from Twitter by Guest
-func (t *Twitter) DownloadVideo(url string) error {
+func (t *Twitter) DownloadVideo(url string) (string, error) {
 	//Parse url to get tweet Id
 	//https: //twitter.com/i/status/1035056498307522560
 	uris := strings.Split(url, "/")
@@ -36,33 +35,32 @@ func (t *Twitter) DownloadVideo(url string) error {
 	if len(uris) >= 5 {
 		configJson = "https://api.twitter.com/1.1/videos/tweet/config/" + uris[5] + ".json"
 	} else {
-		return errors.New("URL provided shoud have form like (https: //twitter.com/i/status/1035056498307522560)")
+		return "", errors.New("URL provided shoud have form like (https: //twitter.com/i/status/1035056498307522560)")
 	}
-	fmt.Println("configUrl:", configJson)
 
 	err := t.activate(t.c)
 	if err != nil {
-		fmt.Println(err.Error())
+		return "", err
 	}
 	err = t.activate2(t.c)
 	if err != nil {
-		fmt.Println(err.Error())
+		return "", err
 	}
 	err = t.getVideoJson(t.c, configJson)
 	if err != nil {
-		fmt.Println(err.Error())
+		return "", err
 	}
 	//jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
 	err = t.getVideoJson2(t.c, configJson)
 	if err != nil {
-		fmt.Println(err.Error())
+		return "", err
 	}
 	//jsonUrl := "https://api.twitter.com/1.1/videos/tweet/config/1035056498307522560.json"
-	err = t.getm3u8List(t.c)
+	name, err := t.getm3u8List(t.c)
 	if err != nil {
-		fmt.Println(err.Error())
+		return "", err
 	}
-	return err
+	return name, err
 }
 
 func (t *Twitter) SetupClient(c *Client) {
@@ -85,13 +83,12 @@ func (t *Twitter) activate(c *Client) error {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64)")
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
 		return err
 	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		fmt.Println(err.Error())
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -114,7 +111,6 @@ func (t *Twitter) activate2(c *Client) error {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64)")
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
 		return err
 	}
 
@@ -134,7 +130,6 @@ func (t *Twitter) activate2(c *Client) error {
 
 	var guest GuestToken
 	err = json.Unmarshal(body, &guest)
-	fmt.Println("respJons:", guest.GuestToken, err)
 	t.guest_token = guest.GuestToken
 	return nil
 }
@@ -154,7 +149,6 @@ func (t *Twitter) getVideoJson(c *Client, jsonUrl string) error {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64)")
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
 		return err
 	}
 
@@ -181,7 +175,6 @@ func (t *Twitter) getVideoJson2(c *Client, jsonUrl string) error {
 	req.Header.Add("x-guest-token", t.guest_token)
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
 		return err
 	}
 
@@ -206,12 +199,10 @@ func (t *Twitter) getVideoJson2(c *Client, jsonUrl string) error {
 	return nil
 }
 
-func (t *Twitter) getm3u8List(c *Client) error {
+func (t *Twitter) getm3u8List(c *Client) (string, error) {
 	if c.client == nil {
 		c.client = &http.Client{}
 	}
-
-	fmt.Println("playbackUrl:", t.playbackUrl)
 
 	req, err := http.NewRequest("GET", t.playbackUrl, nil)
 	req.Header.Add("Accept", "*/*")
@@ -222,13 +213,13 @@ func (t *Twitter) getm3u8List(c *Client) error {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64)")
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
-		return err
+		return "", err
 	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		fmt.Println("Getm3u8List:", err.Error())
+		// fmt.Println("Getm3u8List:", err.Error())
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -247,38 +238,35 @@ func (t *Twitter) getm3u8List(c *Client) error {
 	if strings.HasSuffix(videoUrl, ".mp4") {
 		filename := extractFilename(videoUrl)
 		saveFile(filename, reader)
-		return nil
+		return "", nil
 	}
 	uri, err := playList(reader)
 	if err != nil {
-		fmt.Println("err", err.Error())
-		return err
+		return "", err
 	}
 
 	fileName := extractFilename(t.playbackUrl)
-	fileName = strings.Split(fileName, ".")[0]
+	fileName = strings.Split(fileName, ".")[0] + ".mp4"
 	m3u8Url := "https://video.twimg.com" + uri
-	fmt.Println("m3u8Url:", m3u8Url)
+
 	videoList, err := getM3U8(m3u8Url, c)
 	if err != nil {
-		fmt.Println("err", err.Error())
-		return err
+		return "", err
 	}
 	files := []string{}
 	for _, v := range videoList {
 		videoUrl := "https://video.twimg.com" + v
-		fmt.Println("videoUrl:", videoUrl)
 		//Get video clip save concat them into mp4 file
 		file, err := getVideoClip(videoUrl, c)
 		if err != nil {
-			return err
+			return "", err
 		}
 		files = append(files, file)
 	}
 
 	//Combine all the videos into one mp4
 	combineVideoClip(fileName, files)
-	return nil
+	return fileName, nil
 }
 
 func getM3U8(url string, c *Client) ([]string, error) {
@@ -291,13 +279,12 @@ func getM3U8(url string, c *Client) ([]string, error) {
 	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
 		return nil, err
 	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		fmt.Println("getM3U8:", err.Error())
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -324,7 +311,6 @@ func getVideoClip(url string, c *Client) (string, error) {
 	req.Header.Add("Accept-Encoding", "gzip,deflate,br")
 
 	if err != nil {
-		fmt.Println("GetWithProxy:", err.Error())
 		return "", err
 	}
 
@@ -343,16 +329,14 @@ func getVideoClip(url string, c *Client) (string, error) {
 }
 
 func combineVideoClip(filename string, files []string) {
-	file, err := os.Create(filename + ".mp4")
+	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("Create mp4 failed", err.Error())
 		return
 	}
 	writeLen := 0
 	for _, v := range files {
 		data, err := ioutil.ReadFile(v)
 		if err != nil {
-			fmt.Println("read file failed", err.Error())
 			return
 		}
 		file.WriteAt(data, int64(writeLen))

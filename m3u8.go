@@ -2,7 +2,6 @@ package twitterdownloader
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,7 +13,6 @@ func saveFile(filename string, reader io.ReadCloser) error {
 	body, err := ioutil.ReadAll(reader)
 
 	if err = ioutil.WriteFile(filename, body, os.ModePerm); err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
 	return nil
@@ -33,9 +31,9 @@ func playList(reader io.ReadCloser) (string, error) {
 	}
 
 	switch listType {
-	case m3u8.MEDIA:
-		mediapl := p.(*m3u8.MediaPlaylist)
-		fmt.Printf("%+v\n", mediapl)
+	// case m3u8.MEDIA:
+	// 	mediapl := p.(*m3u8.MediaPlaylist)
+	// 	// fmt.Printf("%+v\n", mediapl)
 	case m3u8.MASTER:
 		masterpl := p.(*m3u8.MasterPlaylist)
 		// fmt.Printf("%+v\n", masterpl)
@@ -47,9 +45,9 @@ func playList(reader io.ReadCloser) (string, error) {
 		target.bandwidth = 0
 
 		for k, v := range masterpl.Variants {
-			fmt.Println("URI:", v.URI)
-			fmt.Println("Resolution:", v.Resolution)
-			fmt.Println("Bandwidth:", v.Bandwidth)
+			// fmt.Println("URI:", v.URI)
+			// fmt.Println("Resolution:", v.Resolution)
+			// fmt.Println("Bandwidth:", v.Bandwidth)
 			if target.bandwidth < v.Bandwidth {
 				target.bandwidth = v.Bandwidth
 				target.index = k
@@ -81,17 +79,17 @@ func videoList(reader io.ReadCloser) ([]string, error) {
 		// fmt.Printf("%+v\n", mediapl)
 		for _, v := range mediapl.Segments {
 			if v == nil {
-				fmt.Println("Nil")
+				// fmt.Println("Nil")
 				break
 			}
-			fmt.Println("URI:", v.URI)
-			fmt.Println("Resolution:", v.Duration)
+			// fmt.Println("URI:", v.URI)
+			// fmt.Println("Resolution:", v.Duration)
 			s = append(s, v.URI)
 		}
 		return s, nil
-	case m3u8.MASTER:
-		masterpl := p.(*m3u8.MasterPlaylist)
-		fmt.Printf("%+v\n", masterpl)
+		// case m3u8.MASTER:
+		// 	masterpl := p.(*m3u8.MasterPlaylist)
+		// 	// fmt.Printf("%+v\n", masterpl)
 	}
 	return nil, errors.New("Not find video list")
 }

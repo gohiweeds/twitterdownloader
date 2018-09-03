@@ -1,7 +1,13 @@
 package twitterdownloader
 
+import "log"
+
 const (
 	URL_PREFIX = "https://twitter.com/i/videos/tweet/"
+)
+
+var (
+	Log *log.Logger
 )
 
 type VideoConfig struct {
