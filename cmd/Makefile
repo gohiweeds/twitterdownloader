@@ -32,5 +32,6 @@ install: deps build
 	
 clean:
 	go clean
+	rm twitterdownloader
 
 .PHONY: all deps test build build_linux build_win install clean
